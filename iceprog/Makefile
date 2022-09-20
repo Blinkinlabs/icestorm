@@ -2,19 +2,16 @@ include ../config.mk
 
 ifeq ($(STATIC),1)
 LDFLAGS += -static
-LDLIBS += $(shell for pkg in libftdi1 libftdi; do $(PKG_CONFIG) --silence-errors --static --libs $$pkg && exit; done; echo -lftdi; )
-CFLAGS += $(shell for pkg in libftdi1 libftdi; do $(PKG_CONFIG) --silence-errors --static --cflags $$pkg && exit; done; )
 else
-LDLIBS += $(shell for pkg in libftdi1 libftdi; do $(PKG_CONFIG) --silence-errors --libs $$pkg && exit; done; echo -lftdi; )
-CFLAGS += $(shell for pkg in libftdi1 libftdi; do $(PKG_CONFIG) --silence-errors --cflags $$pkg && exit; done; )
 
-CFLAGS += -lhidapi-libusb
-LDLIBS += -lhidapi-libusb
+#CFLAGS += -lhidapi-libusb
+#LDLIBS += -lhidapi-libusb
 endif
+LDLIBS += -framework IOKit -framework CoreFoundation -framework AppKit
 
 all: $(PROGRAM_PREFIX)iceprog$(EXE)
 
-$(PROGRAM_PREFIX)iceprog$(EXE): iceprog.o mpsse.o ftdi_interface.o rpi_pico_interface.o
+$(PROGRAM_PREFIX)iceprog$(EXE): iceprog.o rpi_pico_interface.o hid.o
 	$(CC) -o $@ $(LDFLAGS) $^ $(LDLIBS)
 
 install: all
@@ -32,4 +29,3 @@ clean:
 -include *.d
 
 .PHONY: all install uninstall clean
-

@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <hidapi/hidapi.h>
+#include "hidapi/hidapi.h"
 
 #define VENDOR_ID   0xcafe
 #define PRODUCT_ID  0x4004
@@ -10,7 +10,7 @@
 static hid_device * handle;
 
 static void led_set(bool value) {
-    
+
     uint8_t buf[3];
     buf[0] = 0;
     buf[1] = 0x00;
@@ -81,7 +81,8 @@ static void pin_write(uint8_t pin, bool value) {
 }
 
 static bool pin_read(uint8_t pin) {
-    uint8_t buf[2];
+  int response;
+  uint8_t buf[2];
     buf[0] = 0;
     buf[1] = 0x30;
 
@@ -91,12 +92,17 @@ static bool pin_read(uint8_t pin) {
 //    }
 //    printf("]\n");
 
-    hid_write(handle, buf, sizeof(buf));
+    response = hid_write(handle, buf, sizeof(buf));
+    if (response != sizeof(buf)) {
+      printf("write buf size not ok %d\n", response);
+      exit(1);
+      }
 
     uint8_t ret_buf[5];
-    const int bytes_read = hid_read_timeout(handle, ret_buf, sizeof(ret_buf), 400);
+    const int bytes_read = hid_read_timeout(handle, ret_buf, sizeof(ret_buf), 40000);
     if(bytes_read != sizeof(ret_buf)) {
         printf("error reading, got:%i\n", bytes_read);
+        printf("hiderror %ls\n", hid_error(handle));
         exit(1);
     }
 
@@ -145,7 +151,7 @@ static void bitbang_spi(
     buf[7] = (bit_count >> 8) & 0xff;
     buf[8] = (bit_count >> 0) & 0xff;
 
-    
+
     memcpy(&buf[9], buffer, byte_count); // TODO: memory length
 
 //    printf("  send:[");
@@ -214,7 +220,7 @@ static void set_cs_creset(int cs_b, int creset_b) {
 }
 
 // TODO
-static bool get_cdone(void) { 
+static bool get_cdone(void) {
     return pin_read(PIN_CDONE);
 }
 
@@ -279,7 +285,7 @@ const interface_t rpi_pico_interface = {
 
 void rpi_pico_interface_init() {
     hid_init();
-    
+
     handle = hid_open( VENDOR_ID, PRODUCT_ID, NULL);
     if(handle == NULL) {
         printf("Failure!\n");
