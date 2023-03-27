@@ -340,7 +340,7 @@ void rpi_pico_interface_init() {
         // If a matching device isn't found, check for earlier versions and give a hint if found
         if(check_for_old_firmware()) {
             printf("Programmer with incompatible firmware detected- please update to the latest version!\n");
-            printf("See: https://github.com/tillitis/tillitis-key1/blob/main/doc/toolchain_setup.md#fw-update-of-programmer-board\n");
+            printf("See: https://github.com/tillitis/tillitis-key1/blob/main/doc/toolchain_setup.md#mta1-usb-v1-and-tp-1-programming-board-firmware\n");
         }
         else {
             perror("libusb_open_device_with_vid_pid error\n");
