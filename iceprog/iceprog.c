@@ -34,6 +34,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <signal.h>
 
 #ifdef _WIN32
 #include <io.h> /* _setmode() */
@@ -48,6 +49,11 @@
 static bool verbose = false;
 
 const static interface_t *interface;
+static volatile bool ctrlc = false;
+
+void sigint(int unused) {
+	ctrlc = true;
+}
 
 // ---------------------------------------------------------
 // FLASH definitions
@@ -849,6 +855,8 @@ int main(int argc, char **argv)
 	flash_release_reset();
 	usleep(100000);
 
+	signal(SIGINT, sigint);
+
 	if (test_mode)
 	{
 		fprintf(stderr, "reset..\n");
@@ -895,7 +903,7 @@ int main(int argc, char **argv)
 		// ---------------------------------------------------------
 
 		fprintf(stderr, "programming..\n");
-		while (1) {
+		while (!ctrlc) {
 			static unsigned char buffer[4096];
 			int rc = fread(buffer, 1, 4096, f);
 			if (rc <= 0)
@@ -958,7 +966,7 @@ int main(int argc, char **argv)
 					int begin_addr = rw_offset & ~block_mask;
 					int end_addr = (rw_offset + file_size + block_mask) & ~block_mask;
 
-					for (int addr = begin_addr; addr < end_addr; addr += block_size) {
+					for (int addr = begin_addr; (addr < end_addr) && !ctrlc; addr += block_size) {
 						flash_write_enable();
 						switch(erase_block_size) {
 							case 4:
@@ -984,7 +992,7 @@ int main(int argc, char **argv)
 			{
 				fprintf(stderr, "programming..\n");
 
-				for (int rc, addr = 0; true; addr += rc) {
+				for (int rc, addr = 0; !ctrlc; addr += rc) {
 					uint8_t buffer[256];
 					int page_size = 256 - (rw_offset + addr) % 256;
 					rc = fread(buffer, 1, page_size, f);
@@ -1010,7 +1018,7 @@ int main(int argc, char **argv)
 
 		if (read_mode) {
 			fprintf(stderr, "reading..\n");
-			for (int addr = 0; addr < read_size; addr += 256) {
+			for (int addr = 0; (addr < read_size) && !ctrlc; addr += 256) {
 				uint8_t buffer[256];
 				fprintf(stderr, "                      \r");
 				fprintf(stderr, "addr 0x%06X %3d%%\r", rw_offset + addr, 100 * addr / read_size);
@@ -1021,7 +1029,7 @@ int main(int argc, char **argv)
 			fprintf(stderr, "done.\n");
 		} else if (!erase_mode && !disable_verify) {
 			fprintf(stderr, "reading..\n");
-			for (int addr = 0; true; addr += 256) {
+			for (int addr = 0; !ctrlc; addr += 256) {
 				uint8_t buffer_flash[256], buffer_file[256];
 				int rc = fread(buffer_file, 1, 256, f);
 				if (rc <= 0)
@@ -1062,5 +1070,9 @@ int main(int argc, char **argv)
 
 	fprintf(stderr, "Bye.\n");
 	interface->close();
+	if (ctrlc) {
+		fprintf(stderr, "Interrupted by Ctrl-C\n");
+		return 1;
+	}
 	return 0;
 }
