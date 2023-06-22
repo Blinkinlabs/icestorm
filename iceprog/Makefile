@@ -1,14 +1,10 @@
 include ../config.mk
 
 ifeq ($(OS),macos)
-$(info Compiling for macOS)
+$(info Compiling for macOS, expects libsub installed via Homebrew.)
 
-ifeq ($(STATIC),1)
-LDFLAGS += -static
-else #ifeq ($(STATIC),1)
-
-LDLIBS += -lusb-1.0
-endif #ifeq ($(STATIC),1)
+CFLAGS += -I /opt/homebrew/include
+LDFLAGS += -L /opt/homebrew/lib -lusb-1.0
 
 else #ifeq ($(OS),macos)
 
@@ -20,7 +16,6 @@ else
 LDLIBS += $(shell for pkg in libftdi1 libftdi; do $(PKG_CONFIG) --silence-errors --libs $$pkg && exit; done; echo -lftdi; )
 CFLAGS += $(shell for pkg in libftdi1 libftdi; do $(PKG_CONFIG) --silence-errors --cflags $$pkg && exit; done; )
 
-CFLAGS += -llibusb-1.0
 LDLIBS += -lusb-1.0
 endif #ifeq ($(STATIC),1)
 
@@ -30,7 +25,7 @@ all: $(PROGRAM_PREFIX)iceprog$(EXE)
 
 ifeq ($(OS),macos)
 $(PROGRAM_PREFIX)iceprog$(EXE): iceprog.o rpi_pico_interface.o
-	$(CC) -o $@ $(LDFLAGS) $^ $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $(LDFLAGS) $^ $(LDLIBS)
 else
 $(PROGRAM_PREFIX)iceprog$(EXE): iceprog.o mpsse.o ftdi_interface.o rpi_pico_interface.o
 	$(CC) -o $@ $(LDFLAGS) $^ $(LDLIBS)
